@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <link rel="stylesheet" href="./style/style.css">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="js/script.js"></script>
+
+  </head>
+
+  <!-- weather data from DWD -->
+
+  <body>
+    <div class="maps-container">
+
+      <div id="configLeft">
+        <label for="selectYearLeft">Jahr</label>
+        <select id="selectYearLeft"></select>
+        <label for="selectTypeLeft">Daten</label>
+        <select id="selectTypeLeft"></select>
+      </div>
+      <div id="mapContainerLeft">
+        <svg id="mapLeft" width="400" height="600"></svg>
+      </div>
+
+
+      <div id="configRight">
+        <label for="selectYearRight">Jahr</label>
+        <select id="selectYearRight"></select>
+        <label for="selectTypeRight">Daten</label>
+        <select id="selectTypeRight"></select>
+      </div>
+      <div id="mapContainerRight">
+        <svg id="mapRight" width="400" height="600"></svg>
+      </div>
+
+
+    </div>
+  </body>
+
+</html>

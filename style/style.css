@@ -1,0 +1,15 @@
+.maps-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1.8fr 0.2fr;
+    gap: 1px 1px;
+    grid-template-areas: "map1 map2" "config1 config2";
+}
+
+#mapContainerLeft { grid-area: map1; }
+
+#mapContainerRight { grid-area: map2; }
+
+#configLeft { grid-area: config1; }
+
+#configRight { grid-area: config2; }
