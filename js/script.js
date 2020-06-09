@@ -103,40 +103,14 @@ class Map {
             self.bundeslaender = json.features;
 
             // load temperature data
-            d3.csv("./data/avg_temp.csv").then(function(data) {
+            d3.csv("./data/temperature.csv").then(function(data) {
                 self.avgTemp = data;
-                let maximumTemp = 0, minimumTemp = 99999999;
-                // find maximum/minimum in data
-                for (let row in data) {
-                    let rowCopy = Object.assign({}, data[row]);
-                    delete rowCopy['Jahr'];
-
-                    let maxTemp = d3.max(Object.values(rowCopy), d => +d);
-                    let minTemp = d3.min(Object.values(rowCopy), d => +d);
-                    if (maxTemp > maximumTemp) {
-                        maximumTemp = maxTemp;
-                    }
-                    if (minTemp < minimumTemp) {
-                        minimumTemp = minTemp;
-                    }
-                }
+                let minMax = self.getMinMax(data);
 
                 self.colorScaleTemp = d3.scaleLinear(
-                    [minimumTemp, maximumTemp],
+                    [minMax['min'], minMax['max']],
                     [d3.interpolateOranges(0), d3.interpolateOranges(1)]
                 );
-
-                // handle double entries !!!
-                for (let row in self.avgTemp) {
-                    for (let field in self.avgTemp[row]) {
-                        if (field.includes("/")) {
-                            let tempStates = field.split("/");
-                            for (let state in tempStates) {
-                                self.avgTemp[row][tempStates[state]] = self.avgTemp[row][field];
-                            }
-                        }
-                    }
-                }
 
                 // init map with temperature
                 let dataForYear = self.avgTemp.filter(d => d['Jahr'] == 1991)[0];
@@ -156,79 +130,51 @@ class Map {
             // load sunshine data
             d3.csv("./data/sunshine.csv").then(function(data){
                 self.sunshineDuration = data;
-
-                let maximumSun = 0, minimumSun = 9999999999;
-                // calculate min and max values
-                for (let row in self.sunshineDuration){
-                    let rowCopy = Object.assign({}, self.sunshineDuration[row]);
-                    delete rowCopy['Jahr'];
-
-                    let maxSun = d3.max(Object.values(rowCopy), d => +d);
-                    let minSun = d3.min(Object.values(rowCopy), function(d){
-                        if (d == ""){
-                            return 999999999;
-                        } else {
-                            return +d;
-                        }
-                    });
-
-                    if (maxSun > maximumSun){
-                        maximumSun = maxSun;
-                    }
-                    if (minSun < minimumSun){
-                        minimumSun = minSun;
-                    }
-                }
+                let minMax = self.getMinMax(data);
 
                 self.colorScaleSunshine = d3.scaleLinear(
-                    [minimumSun, maximumSun],
+                    [minMax['min'], minMax['max']],
                     ["white", "red"]
                 );
-
-                // handle duplicate entries !!!
-                for (let row in self.sunshineDuration){
-                    for (let field in self.sunshineDuration[row]){
-                        if (field.includes("/")){
-                            let tempStates = field.split("/");
-                            for (let state in tempStates){
-                                self.sunshineDuration[row][tempStates[state]] = self.sunshineDuration[row][field];
-                            }
-                        }
-                    }
-                }
             });
 
             // load precipitation data
             d3.csv("./data/precipitation.csv").then(function(data){
                 self.precipitation = data;
-                let maximumPrec = 0, minimumPrec = 9999999999;
-                for (let row in self.precipitation){
-                    let rowCopy = Object.assign({}, self.precipitation[row]);
-                    delete rowCopy['Jahr'];
-
-                    let maxPrecipitation = d3.max(Object.values(rowCopy), d => +d);
-                    let minPrecipitation = d3.min(Object.values(rowCopy), function(d){
-                        if (d == ""){
-                            return 999999999;
-                        } else {
-                            return +d;
-                        }
-                    });
-
-                    if (maxPrecipitation > maximumPrec){
-                        maximumPrec = maxPrecipitation;
-                    }
-                    if (minPrecipitation < minimumPrec){
-                        minimumPrec = minPrecipitation;
-                    }
-                }
+                let minMax = self.getMinMax(data);
 
                 self.colorScalePrecipitation = d3.scaleLinear(
-                    [minimumPrec, maximumPrec],
+                    [minMax['min'], minMax['max']],
                     ["white", "blue"]
                 );
             })
         });
+    }
+
+    getMinMax(data){
+        // gets min/max from all years for comparability
+        let max = 0, min = 9999999999;
+        for (let row in data){
+            let rowCopy = Object.assign({}, data[row]);
+            delete rowCopy['Jahr'];
+
+            let tempMax = d3.max(Object.values(rowCopy), d => +d);
+            let tempMin = d3.min(Object.values(rowCopy), function(d){
+                if (d === ""){
+                    return 999999999;
+                } else {
+                    return +d;
+                }
+            });
+
+            if (tempMax > max){
+                max = tempMax;
+            }
+            if (tempMin < min){
+                min = tempMin;
+            }
+        }
+        return {"min": min, "max": max}
     }
 }
 
