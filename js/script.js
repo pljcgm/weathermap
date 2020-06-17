@@ -103,7 +103,7 @@ class Map {
             self.bundeslaender = json.features;
 
             // load temperature data
-            d3.csv("./data/temperature.csv").then(function(data) {
+            d3.csv("./data/regional_averages_tm_year.csv").then(function(data) {
                 self.avgTemp = data;
                 let minMax = self.getMinMax(data);
 
@@ -128,7 +128,7 @@ class Map {
             });
 
             // load sunshine data
-            d3.csv("./data/sunshine.csv").then(function(data){
+            d3.csv("./data/regional_averages_sd_year.csv").then(function(data){
                 self.sunshineDuration = data;
                 let minMax = self.getMinMax(data);
 
@@ -139,7 +139,7 @@ class Map {
             });
 
             // load precipitation data
-            d3.csv("./data/precipitation.csv").then(function(data){
+            d3.csv("./data/regional_averages_rr_year.csv").then(function(data){
                 self.precipitation = data;
                 let minMax = self.getMinMax(data);
 
