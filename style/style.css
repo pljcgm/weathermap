@@ -1,9 +1,9 @@
 .maps-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1.8fr 0.2fr;
+    grid-template-rows: 1.6fr 0.2fr 0.2fr;
     gap: 1px 1px;
-    grid-template-areas: "map1 map2" "config1 config2";
+    grid-template-areas: "map1 map2" "legend1 legend2" "config1 config2" ;
 }
 
 #mapContainerLeft { grid-area: map1; }
@@ -13,3 +13,6 @@
 #configLeft { grid-area: config1; }
 
 #configRight { grid-area: config2; }
+
+#legendLeft {grid-area: legend1;}
+#legendRight {grid-area: legend2;}

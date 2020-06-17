@@ -26,7 +26,7 @@ def convert_to_csv(file_name):
             temp_result[0][i] = 'Hamburg'
             cols_to_copy[i] = 'Bremen'
 
-    result = []
+    temp_result2 = []
     # copy and remove columns
     for line in temp_result:
         temp = []
@@ -35,18 +35,24 @@ def convert_to_csv(file_name):
                 temp.append(line[i])
             if i in cols_to_copy:
                 temp.append(line[i])
-        result.append(temp)
+        temp_result2.append(temp)
     for col in cols_to_copy.keys():
-        result[0][col] = cols_to_copy[col]
+        temp_result2[0][col] = cols_to_copy[col]
 
-    header = result[0]
-    data = result[1:]
+    header = temp_result2[0]
+    data = temp_result2[1:]
     # convert data to integer/float
     for i in range(len(data)):
         data[i][0] = int(data[i][0])
         for j in range(1, len(data[0])):
             data[i][j] = float(data[i][j])
-    result = [header] + data
+
+    result = []
+
+    for i in range(len(data)):
+        if data[i][0] > 1990:
+            result.append(data[i])
+    result = [header] + result
 
     # write to csv
     with open(file_name + ".csv", "w", newline="", encoding="utf-8") as f:
