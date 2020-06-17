@@ -2,6 +2,15 @@ const YEARS = [...Array(29).keys()].map(i => i + 1991);
 const DATATYPES = ["Temperatur", "Sonnenscheindauer", "Niederschlag"];
 const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json";
 
+const tooltip = d3.select("#tooltip")
+    .style("background-color", "steelblue")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("font-family", "Arial, Helvetica, sans-serif")
+    .style("padding", "5px")
+    .style("border-radius", "15px")
+    .style("opacity", 0.9)
+
 
 class Map {
     constructor(mapSelector, yearSelector, typeSelector) {
@@ -9,12 +18,22 @@ class Map {
         this.typeField = d3.select(typeSelector);
         this.yearField = d3.select(yearSelector);
 
+        this.tooltip = d3.select("#tooltip")
+            .style("background-color", "steelblue")
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("font-family", "Arial, Helvetica, sans-serif")
+            .style("padding", "5px")
+            .style("border-radius", "15px")
+            .style("opacity", 0.2)
+
         this.initSelectors();
         this.initMap();
         this.initListeners();
     }
 
     changeHandler(){
+        var self = this;
         let dataType = this.typeField.property("value");
         let data, colorScale;
 
@@ -31,15 +50,29 @@ class Map {
 
         let year = this.yearField.property("value");
 
-        let dataForYear = data.filter(d => d['Jahr'] == year)[0];
+        let currentData = data.filter(d => d['Jahr'] == year)[0];
 
         this.map.selectAll("path")
             .data(this.bundeslaender)
+            .on("mouseover", (d, i) => self.showTooltip(d,i,currentData))
+            .on("mouseout", (d, i) => self.tooltip.style("visibility", "hidden"))
             .transition()
             .duration(1000)
             .style("fill", function(d){
-                return colorScale(dataForYear[d['properties']['name']]);
+                return colorScale(currentData[d['properties']['name']]);
             });
+    }
+
+    showTooltip(d, i, currentData) {
+        // TODO: better location for tooltip/better update of tooltip
+        this.tooltip
+            .style("visibility", "visible")
+            .style("top", (event.pageY-30) + "px")
+            .style("left", event.pageX + "px")
+            .text(currentData[d['properties']['name']])
+            .style("opacity", 0)
+        this.tooltip.transition().duration(100)
+            .style("opacity", 0.8)
     }
 
     initListeners(){
@@ -115,15 +148,18 @@ class Map {
                 // init map with temperature
                 let dataForYear = self.avgTemp.filter(d => d['Jahr'] == 1991)[0];
 
+
                 self.map.selectAll("path")
                     .data(self.bundeslaender)
                     .enter()
                     .append("path")
+                    .on("mouseover", (d, i) => self.showTooltip(d,i,dataForYear))
+                    .on("mouseout", (d, i) => self.tooltip.style("visibility", "hidden"))
                     .attr("class", "state")
                     .attr("d", self.path)
                     .style("fill", function(d){
                         return self.colorScaleTemp(dataForYear[d['properties']['name']]);
-                    });
+                    })
 
             });
 
@@ -179,6 +215,7 @@ class Map {
 }
 
 var mapLeft, mapRight;
+
 
 $(document).ready(function(){
     mapLeft = new Map("#mapLeft", "#selectYearLeft", "#selectTypeLeft");
