@@ -1,6 +1,8 @@
 const YEARS = [...Array(29).keys()].map(i => i + 1991);
 const DATATYPES = ["Temperatur", "Sonnenscheindauer", "Niederschlag"];
-const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json";
+// const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json";
+// const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/3_mittel.geo.json";
+const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/4_niedrig.geo.json";
 
 const MAP_SIZE = {
     "height": 600,
@@ -9,6 +11,7 @@ const MAP_SIZE = {
 
 // TODO: better structure for data / functions (json function calls?)
 // TODO: only update legend when dataType has changed
+// TODO: var/let/const & self/this reference
 
 const tooltip = d3.select("#tooltip")
     .style("background-color", "steelblue")
@@ -23,6 +26,7 @@ const tooltip = d3.select("#tooltip")
 
 class Map {
     constructor(mapSelector, yearSelector, typeSelector, legendSelector) {
+        this.mapId = mapSelector.slice(1);
         this.map = d3.select(mapSelector);
         this.typeField = d3.select(typeSelector);
         this.yearField = d3.select(yearSelector);
@@ -44,7 +48,7 @@ class Map {
     }
 
     changeHandler(){
-        var self = this;
+        let self = this;
         let dataType = this.typeField.property("value");
         let data, colorScale;
 
@@ -63,29 +67,49 @@ class Map {
 
         let currentData = data.filter(d => d['Jahr'] == year)[0];
 
+        // TODO: DATEN ÜBERPRÜFEN!!!!!
+
+        self.map.selectAll("path").each(function(state) {
+            d3.select(this)
+                .on("mouseenter", (d, i) => self.showTooltip(this, d, i, currentData))
+                .on("mousemove", (d, i) => self.moveTooltip())
+                .on("mouseout", (d, i) => self.hideTooltip(d, i, currentData))
+        });
+
         this.map.selectAll("path")
-            .data(this.bundeslaender)
-            .on("mouseover", (d, i) => self.showTooltip(d,i,currentData))
-            .on("mouseout", (d, i) => self.tooltip.style("visibility", "hidden"))
+            //.data(this.bundeslaender)
             .transition()
             .duration(1000)
-            .style("fill", function(d){
-                return colorScale(currentData[d['properties']['name']]);
-            });
+            .style("fill", d => colorScale(currentData[d['properties']['name']]));
 
-        self.createLegend(dataType);
+        this.createLegend(dataType);
     }
 
-    showTooltip(d, i, currentData) {
+    showTooltip(element, d, i, currentData) {
         // TODO: better location for tooltip/better update of tooltip
+
+        this.map.selectAll("path").attr("opacity", 0.7);
+        d3.select(element).attr("opacity", 1);
+
         this.tooltip
             .style("visibility", "visible")
             .style("top", (event.pageY-30) + "px")
             .style("left", event.pageX + "px")
-            .text(currentData[d['properties']['name']])
-            .style("opacity", 0)
+            .text(d['properties']['name'] + ": " + currentData[d['properties']['name']])
+            .style("opacity", 0);
         this.tooltip.transition().duration(100)
-            .style("opacity", 0.8)
+            .style("opacity", 0.8);
+    }
+
+    moveTooltip(){
+        this.tooltip
+            .style("top", (event.pageY-30) + "px")
+            .style("left", event.pageX + "px")
+    }
+
+    hideTooltip(d, i, currentData) {
+        this.map.selectAll("path").attr("opacity", 1);
+        this.tooltip.style("visibility", "hidden");
     }
 
     initListeners(){
@@ -173,7 +197,7 @@ class Map {
                 .scale(scale * 200);
 
             //Define path generator
-            self.path = d3.geoPath()
+            self.pathGenerator = d3.geoPath()
                 .projection(self.projection);
 
             self.bundeslaender = json.features;
@@ -189,7 +213,7 @@ class Map {
                     ["lightblue", "red"]
                 );
 
-                // init map with temperature
+                // initialize map (with temperature data)
                 let dataForYear = self.avgTemp.filter(d => d['Jahr'] == 1991)[0];
 
                 self.createLegend("Temperatur");
@@ -198,14 +222,53 @@ class Map {
                     .data(self.bundeslaender)
                     .enter()
                     .append("path")
-                    .on("mouseover", (d, i) => self.showTooltip(d,i,dataForYear))
-                    .on("mouseout", (d, i) => self.tooltip.style("visibility", "hidden"))
                     .attr("class", "state")
-                    .attr("d", self.path)
+                    .attr("id", d => self.mapId + d['properties']['name'])
+                    .attr("d", self.pathGenerator)
                     .style("fill", function(d){
                         return self.colorScaleTemp(dataForYear[d['properties']['name']]);
-                    })
+                    });
 
+                // // append use element to svg (to put certain states in front later) (FOR ZOOMING)
+                // self.map
+                //     .append("use")
+                //     .attr("href", "#XX")
+
+                // didn't work with the normal function (because of class/this reference?
+                self.map.selectAll("path").each(function(state) {
+                    d3.select(this)
+                        .on("mouseover", (d, i) => self.showTooltip(this, d,i,dataForYear))
+                        .on("mouseout", (d, i) => self.hideTooltip(d, i, dataForYear))
+                        .on("mousemove", (d, i) => self.moveTooltip())
+                });
+                //     let zoom = function(element, scaling, bBox) {
+                //         let x = bBox.x + bBox.width / 2
+                //         let y = bBox.y + bBox.height / 2
+                //         d3.select(element)
+                //             .attr("transform", "translate("+ ((1-scaling)*x) + ","+ ((1-scaling)*y) +") scale(" + scaling + ")")
+                //         // .style("stroke-opacity", 1);
+                //         //console.log(d3.select(element).node()['id'])
+                //         self.map.select("use").attr("href", "#" + d3.select(element).node()['id'])
+                //     }
+                //     d3.select(this)
+                //         .on("mouseenter", function () {
+                //             // TODO: ZOOM FUNKTIONIERT NICHT!!!
+                //             // if center (10, 20) and you are scaling by 3 then translate by (1 - 3)*10, (1 - 3)*20
+                //             // let boundingBox = d3.select(this).node().getBBox();
+                //             // let scaling = 1.1;
+                //             // zoom(this, scaling, boundingBox);
+                //             self.map.selectAll("path").attr("opacity", 0.7);
+                //             d3.select(this).attr("opacity", 1);
+                //         })
+                //         .on("mouseout", function() {
+                //             // TODO: ZOOM FUNKTIONIERT NICHT!!!
+                //             // console.log("MOUSELEAVE");
+                //             // let boundingBox = d3.select(this).node().getBBox();
+                //             // let scaling = 0.90909090909;
+                //             // zoom(this, scaling, boundingBox);
+                //             self.map.selectAll("path").attr("opacity", 1);
+                //         });
+                // });
             });
 
             // load sunshine data
@@ -264,25 +327,8 @@ class Map {
 
 var mapLeft, mapRight, legend, scale, cScale;
 
-
 $(document).ready(function(){
     mapLeft = new Map("#mapLeft", "#selectYearLeft", "#selectTypeLeft", "#legendLeft");
     mapRight = new Map("#mapRight", "#selectYearRight", "#selectTypeRight", "#legendRight");
-
-    // sScale = d3.scaleLinear([0, 10], [0, 10])
-    // cScale = d3.scaleLinear([0, 5, 10], ["rgb(255, 0, 0)", "rgb(0, 255, 0)", "rgb(255, 255, 255)"]);
-    //
-    // var svg = d3.select("#legendLeft").attr("width", "200px").attr("height", "20px")
-    //
-    // let data = [0,1,2,3,4,5,6,7,8,9,10]
-    //
-    // svg.selectAll("rect").data(data).enter().append("rect")
-    //     .attr("height", "20px")
-    //     .attr("width", "20px")
-    //     .attr("x", d => d*20)
-    //     .attr("fill", d => cScale(d))
-
-
-
 
 });
