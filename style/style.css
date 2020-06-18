@@ -16,3 +16,14 @@
 
 #legendLeft {grid-area: legend1;}
 #legendRight {grid-area: legend2;}
+
+#tooltip {
+    background-color: steelblue;
+    border: black solid;
+    position: absolute;
+    visibility: hidden;
+    font-family: Helvetica, Arial, sans-serif;
+    border-radius: 5px;
+    padding: 10px;
+    opacity: 0;
+}

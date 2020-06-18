@@ -13,34 +13,24 @@ const MAP_SIZE = {
 // TODO: only update legend when dataType has changed
 // TODO: var/let/const & self/this reference
 
-const tooltip = d3.select("#tooltip")
-    .style("background-color", "steelblue")
-    .style("position", "absolute")
-    .style("visibility", "hidden")
-    .style("font-family", "Arial, Helvetica, sans-serif")
-    .style("padding", "5px")
-    .style("border-radius", "25px")
-    .style("opacity", 0.9)
-
-
 
 class Map {
-    constructor(mapSelector, yearSelector, typeSelector, legendSelector) {
+    constructor(mapSelector, yearSelector, typeSelector, legendSelector, tooltipSelector) {
         this.mapId = mapSelector.slice(1);
         this.map = d3.select(mapSelector);
         this.typeField = d3.select(typeSelector);
         this.yearField = d3.select(yearSelector);
         this.legend = d3.select(legendSelector);
         this.minMax = {}
+        this.tooltip = d3.select(tooltipSelector)
 
-        this.tooltip = d3.select("#tooltip")
-            .style("background-color", "steelblue")
-            .style("position", "absolute")
-            .style("visibility", "hidden")
-            .style("font-family", "Arial, Helvetica, sans-serif")
-            .style("padding", "5px")
-            .style("border-radius", "15px")
-            .style("opacity", 0.2)
+        this.dataType = {
+            temperature: {},
+            precipitation: {},
+            sunshine: {},
+            data: null
+        }
+
 
         this.initSelectors();
         this.initMap();
@@ -53,15 +43,21 @@ class Map {
         let data, colorScale;
 
         if (dataType === "Temperatur"){
-            data = this.avgTemp;
-            colorScale = this.colorScaleTemp;
+            dataType = this.dataType.temperature
+            // data = this.avgTemp;
+            // colorScale = this.dataType.temperature.colorScale;
         } else if (dataType === "Sonnenscheindauer"){
-            data = this.sunshineDuration;
-            colorScale = this.colorScaleSunshine;
+            dataType = this.dataType.sunshine;
+            // data = this.sunshineDuration;
+            // colorScale = this.dataType.sunshine.colorScale;
         } else {
-            data = this.precipitation;
-            colorScale = this.colorScalePrecipitation;
+            dataType = this.dataType.precipitation;
+            // data = this.precipitation;
+            // colorScale = this.dataType.precipitation.colorScale;
         }
+
+        data = dataType.data;
+        colorScale = dataType.colorScale;
 
         let year = this.yearField.property("value");
 
@@ -71,9 +67,9 @@ class Map {
 
         self.map.selectAll("path").each(function(state) {
             d3.select(this)
-                .on("mouseenter", (d, i) => self.showTooltip(this, d, i, currentData))
+                .on("mouseenter", (d, i) => self.showTooltip(this, d, currentData, dataType))
                 .on("mousemove", (d, i) => self.moveTooltip())
-                .on("mouseout", (d, i) => self.hideTooltip(d, i, currentData))
+                .on("mouseout", (d, i) => self.hideTooltip())
         });
 
         this.map.selectAll("path")
@@ -85,8 +81,9 @@ class Map {
         this.createLegend(dataType);
     }
 
-    showTooltip(element, d, i, currentData) {
+    showTooltip(element, d, currentData, dataType) {
         // TODO: better location for tooltip/better update of tooltip
+        let currentValue = currentData[d['properties']['name']];
 
         this.map.selectAll("path").attr("opacity", 0.7);
         d3.select(element).attr("opacity", 1);
@@ -95,21 +92,36 @@ class Map {
             .style("visibility", "visible")
             .style("top", (event.pageY-30) + "px")
             .style("left", event.pageX + "px")
-            .text(d['properties']['name'] + ": " + currentData[d['properties']['name']])
+            .text(d['properties']['name'] + ": " + currentValue)
+            .style("background-color", dataType.colorScale(currentValue))
             .style("opacity", 0);
         this.tooltip.transition().duration(100)
             .style("opacity", 0.8);
+
+        // Show value indicator on legend
+        let currentPosOnLegend = dataType.scaleDataToWidth(currentValue);
+
+        let tri = {
+            a: [currentPosOnLegend, 20],
+            b: [currentPosOnLegend + 10, 0],
+            c: [currentPosOnLegend - 10, 0]
+        }
+
+        this.legend.append("polygon").attr("points", tri.a[0]+","+tri.a[1]+" "+tri.b[0]+","+tri.b[1]+" "+tri.c[0]+","+tri.c[1])
+            .style("fill", dataType.colorScale(currentValue))
+            .attr("class", "marker");
     }
 
     moveTooltip(){
         this.tooltip
             .style("top", (event.pageY-30) + "px")
-            .style("left", event.pageX + "px")
+            .style("left", (event.pageX+30) + "px")
     }
 
-    hideTooltip(d, i, currentData) {
+    hideTooltip() {
         this.map.selectAll("path").attr("opacity", 1);
         this.tooltip.style("visibility", "hidden");
+        this.legend.selectAll('.marker').remove();
     }
 
     initListeners(){
@@ -140,33 +152,26 @@ class Map {
     }
 
     createLegend(dataType){
-        // LEGEND TEST
-        let colorScale;
-        if (dataType === "Temperatur"){
-            colorScale = this.colorScaleTemp;
-        } else if (dataType === "Sonnenscheindauer"){
-            colorScale = this.colorScaleSunshine;
-        } else {
-            colorScale = this.colorScalePrecipitation;
-        }
+        let colorScale = dataType.colorScale;
+        let widthToDataScale = dataType.scaleWidthToData;
+        let dataToWidthScale = dataType.scaleDataToWidth;
 
-        let sc = d3.scaleLinear([0,380], [this.minMax[dataType]['min'], this.minMax[dataType]['max']]);
-        let scReverse = d3.scaleLinear([this.minMax[dataType]['min'], this.minMax[dataType]['max']], [0,400]);
+        // steps of legend color change
         let data2 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
-        let legendSvg = this.legend.attr("width", MAP_SIZE['width'] + "px").attr("height", "40px")
+        let legendSvg = this.legend.attr("width", MAP_SIZE['width'] + "px").attr("height", "60px")
         legendSvg.selectAll("rect").remove(); // remove legend if there was one before
         legendSvg.selectAll("rect").data(data2).enter().append("rect")
             .attr("height", "20px")
             .attr("width", "40px")
             .attr("x", d => d + "px")
-            .attr("fill", d => colorScale(sc(d)))
+            .attr("y", "20px")
+            .attr("fill", d => colorScale(widthToDataScale(d)))
 
         legendSvg.select("g").remove(); // remove axis if there was one before
-        let axis = d3.axisBottom().scale(scReverse).ticks(10).tickSize(5)
+        let axis = d3.axisBottom().scale(dataToWidthScale).ticks(10).tickSize(5)
 
-        legendSvg.append("g").attr("transform", "translate(0,20)").call(axis);
+        legendSvg.append("g").attr("transform", "translate(0,40)").call(axis);
         legendSvg.select("g").call(g => g.select(".domain").remove()) // remove axis line
-        // LEGEND TEST
     }
 
     initMap(){
@@ -204,9 +209,15 @@ class Map {
 
             // load temperature data
             d3.csv("./data/regional_averages_tm_year.csv").then(function(data) {
-                self.avgTemp = data;
+                //self.avgTemp = data;
+                self.dataType.temperature['data'] = data;
                 let minMax = self.getMinMax(data);
-                self.minMax['Temperatur'] = minMax;
+                self.dataType.temperature['minMax'] = minMax;
+
+                self.dataType.temperature['colorScale'] = d3.scaleLinear(
+                    [minMax['min'], minMax['max']],
+                    ["lightblue", "red"]
+                );
 
                 self.colorScaleTemp = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
@@ -214,9 +225,7 @@ class Map {
                 );
 
                 // initialize map (with temperature data)
-                let dataForYear = self.avgTemp.filter(d => d['Jahr'] == 1991)[0];
-
-                self.createLegend("Temperatur");
+                let dataForYear = self.dataType.temperature.data.filter(d => d['Jahr'] == 1991)[0];
 
                 self.map.selectAll("path")
                     .data(self.bundeslaender)
@@ -226,73 +235,55 @@ class Map {
                     .attr("id", d => self.mapId + d['properties']['name'])
                     .attr("d", self.pathGenerator)
                     .style("fill", function(d){
-                        return self.colorScaleTemp(dataForYear[d['properties']['name']]);
+                        return self.dataType.temperature.colorScale(dataForYear[d['properties']['name']]);
                     });
 
-                // // append use element to svg (to put certain states in front later) (FOR ZOOMING)
-                // self.map
-                //     .append("use")
-                //     .attr("href", "#XX")
+                // prepare legend
+                self.dataType.temperature['scaleWidthToData'] = d3.scaleLinear([0,380], [self.dataType.temperature['minMax']['min'], self.dataType.temperature['minMax']['max']]);
+                self.dataType.temperature['scaleDataToWidth'] = d3.scaleLinear([self.dataType.temperature['minMax']['min'], self.dataType.temperature['minMax']['max']], [0,400]);
 
-                // didn't work with the normal function (because of class/this reference?
+                //console.log(self.dataType.temperature['scaleDataToWidth'](200))
+
+                self.createLegend(self.dataType.temperature);
+                // didn't work with the normal d3 function (because of class/this reference?
                 self.map.selectAll("path").each(function(state) {
                     d3.select(this)
-                        .on("mouseover", (d, i) => self.showTooltip(this, d,i,dataForYear))
+                        .on("mouseenter", (d, i) => self.showTooltip(this, d,dataForYear, self.dataType.temperature))
                         .on("mouseout", (d, i) => self.hideTooltip(d, i, dataForYear))
                         .on("mousemove", (d, i) => self.moveTooltip())
                 });
-                //     let zoom = function(element, scaling, bBox) {
-                //         let x = bBox.x + bBox.width / 2
-                //         let y = bBox.y + bBox.height / 2
-                //         d3.select(element)
-                //             .attr("transform", "translate("+ ((1-scaling)*x) + ","+ ((1-scaling)*y) +") scale(" + scaling + ")")
-                //         // .style("stroke-opacity", 1);
-                //         //console.log(d3.select(element).node()['id'])
-                //         self.map.select("use").attr("href", "#" + d3.select(element).node()['id'])
-                //     }
-                //     d3.select(this)
-                //         .on("mouseenter", function () {
-                //             // TODO: ZOOM FUNKTIONIERT NICHT!!!
-                //             // if center (10, 20) and you are scaling by 3 then translate by (1 - 3)*10, (1 - 3)*20
-                //             // let boundingBox = d3.select(this).node().getBBox();
-                //             // let scaling = 1.1;
-                //             // zoom(this, scaling, boundingBox);
-                //             self.map.selectAll("path").attr("opacity", 0.7);
-                //             d3.select(this).attr("opacity", 1);
-                //         })
-                //         .on("mouseout", function() {
-                //             // TODO: ZOOM FUNKTIONIERT NICHT!!!
-                //             // console.log("MOUSELEAVE");
-                //             // let boundingBox = d3.select(this).node().getBBox();
-                //             // let scaling = 0.90909090909;
-                //             // zoom(this, scaling, boundingBox);
-                //             self.map.selectAll("path").attr("opacity", 1);
-                //         });
-                // });
             });
 
             // load sunshine data
             d3.csv("./data/regional_averages_sd_year.csv").then(function(data){
-                self.sunshineDuration = data;
+                //self.sunshineDuration = data;
+                self.dataType.sunshine['data'] = data;
                 let minMax = self.getMinMax(data);
-                self.minMax['Sonnenscheindauer'] = minMax;
-
-                self.colorScaleSunshine = d3.scaleLinear(
+                self.dataType.sunshine['minMax'] = minMax;
+                self.dataType.sunshine['colorScale'] = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
                     ["darkblue", "yellow"]
                 );
+
+                self.dataType.sunshine['scaleWidthToData'] = d3.scaleLinear([0,380], [self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']]);
+                self.dataType.sunshine['scaleDataToWidth'] = d3.scaleLinear([self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']], [0,400]);
             });
 
             // load precipitation data
             d3.csv("./data/regional_averages_rr_year.csv").then(function(data){
-                self.precipitation = data;
+                //self.precipitation = data;
+                self.dataType.precipitation['data'] = data;
                 let minMax = self.getMinMax(data);
-                self.minMax['Niederschlag'] = minMax;
+                self.dataType.precipitation['minMax'] = minMax;
 
-                self.colorScalePrecipitation = d3.scaleLinear(
+                self.dataType.precipitation['colorScale'] = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
                     ["lightyellow", "green", "blue"]
                 );
+
+                self.dataType.precipitation['scaleWidthToData'] = d3.scaleLinear([0,380], [self.dataType.precipitation['minMax']['min'], self.dataType.precipitation['minMax']['max']]);
+                self.dataType.precipitation['scaleDataToWidth'] = d3.scaleLinear([self.dataType.precipitation['minMax']['min'], self.dataType.precipitation['minMax']['max']], [0,400]);
+
             })
         });
     }
@@ -328,7 +319,9 @@ class Map {
 var mapLeft, mapRight, legend, scale, cScale;
 
 $(document).ready(function(){
-    mapLeft = new Map("#mapLeft", "#selectYearLeft", "#selectTypeLeft", "#legendLeft");
-    mapRight = new Map("#mapRight", "#selectYearRight", "#selectTypeRight", "#legendRight");
+    mapLeft = new Map("#mapLeft", "#selectYearLeft", "#selectTypeLeft",
+        "#legendLeft", "#tooltip");
+    mapRight = new Map("#mapRight", "#selectYearRight", "#selectTypeRight",
+        "#legendRight", "#tooltip");
 
 });
