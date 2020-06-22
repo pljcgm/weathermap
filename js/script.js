@@ -1,12 +1,13 @@
 const YEARS = [...Array(29).keys()].map(i => i + 1991);
 const DATATYPES = ["Temperatur", "Sonnenscheindauer", "Niederschlag"];
-// const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json";
+const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json";
 // const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/3_mittel.geo.json";
-const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/4_niedrig.geo.json";
+//const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/4_niedrig.geo.json";
 
 const MAP_SIZE = {
     "height": 600,
-    "width": 400
+    "width": 400,
+    "legend-width": 350
 }
 
 // TODO: better structure for data / functions (json function calls?)
@@ -18,6 +19,11 @@ class Map {
     constructor(mapSelector, yearSelector, typeSelector, legendSelector, tooltipSelector) {
         this.mapId = mapSelector.slice(1);
         this.map = d3.select(mapSelector);
+
+        // if we want background color:
+        // this.map.append("rect").attr("width", MAP_SIZE['width'])
+        //     .attr("height", MAP_SIZE['height']).style("fill", "black")
+
         this.typeField = d3.select(typeSelector);
         this.yearField = d3.select(yearSelector);
         this.legend = d3.select(legendSelector);
@@ -28,6 +34,7 @@ class Map {
             temperature: {},
             precipitation: {},
             sunshine: {},
+            minMax: {},
             data: null
         }
 
@@ -44,16 +51,10 @@ class Map {
 
         if (dataType === "Temperatur"){
             dataType = this.dataType.temperature
-            // data = this.avgTemp;
-            // colorScale = this.dataType.temperature.colorScale;
         } else if (dataType === "Sonnenscheindauer"){
             dataType = this.dataType.sunshine;
-            // data = this.sunshineDuration;
-            // colorScale = this.dataType.sunshine.colorScale;
         } else {
             dataType = this.dataType.precipitation;
-            // data = this.precipitation;
-            // colorScale = this.dataType.precipitation.colorScale;
         }
 
         data = dataType.data;
@@ -82,7 +83,6 @@ class Map {
     }
 
     showTooltip(element, d, currentData, dataType) {
-        // TODO: better location for tooltip/better update of tooltip
         let currentValue = currentData[d['properties']['name']];
 
         this.map.selectAll("path").attr("opacity", 0.7);
@@ -99,7 +99,8 @@ class Map {
             .style("opacity", 0.8);
 
         // Show value indicator on legend
-        let currentPosOnLegend = dataType.scaleDataToWidth(currentValue);
+        let offset = (MAP_SIZE['width'] - MAP_SIZE['legend-width']) / 2;
+        let currentPosOnLegend = dataType.scaleDataToWidth(currentValue) + offset;
 
         let tri = {
             a: [currentPosOnLegend, 20],
@@ -156,13 +157,17 @@ class Map {
         let widthToDataScale = dataType.scaleWidthToData;
         let dataToWidthScale = dataType.scaleDataToWidth;
 
+        let offset = (MAP_SIZE['width'] - MAP_SIZE['legend-width']) / 2
+
         // steps of legend color change
-        let data2 = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380]
-        let legendSvg = this.legend.attr("width", MAP_SIZE['width'] + "px").attr("height", "60px")
+        let scaleIncrements = [...Array(MAP_SIZE['legend-width']).keys()].map(i => i);
+        // let scaleIncrements = [...Array(381).keys()].map(i => i);
+        let legendSvg = this.legend.attr("width", (MAP_SIZE['legend-width'] + offset ) + "px").attr("height", "60px")
         legendSvg.selectAll("rect").remove(); // remove legend if there was one before
-        legendSvg.selectAll("rect").data(data2).enter().append("rect")
+        legendSvg.selectAll("rect").data(scaleIncrements).enter().append("rect")
+            .attr("transform", "translate(" + offset + ",0)")
             .attr("height", "20px")
-            .attr("width", "40px")
+            .attr("width", "2px")
             .attr("x", d => d + "px")
             .attr("y", "20px")
             .attr("fill", d => colorScale(widthToDataScale(d)))
@@ -170,7 +175,7 @@ class Map {
         legendSvg.select("g").remove(); // remove axis if there was one before
         let axis = d3.axisBottom().scale(dataToWidthScale).ticks(10).tickSize(5)
 
-        legendSvg.append("g").attr("transform", "translate(0,40)").call(axis);
+        legendSvg.append("g").attr("transform", "translate( " + offset + ",40)").call(axis);
         legendSvg.select("g").call(g => g.select(".domain").remove()) // remove axis line
     }
 
@@ -183,14 +188,17 @@ class Map {
             self.width = MAP_SIZE['width'];
             self.height = MAP_SIZE['height'];
 
+            self.map.attr("width", self.width);
+            self.map.attr("height", self.height);
+
             let bounds = d3.geoBounds(json);
             let bottomLeft = bounds[0], topRight = bounds[1];
             let rotLong = -(topRight[0]+bottomLeft[0])/2;
             let center = [(topRight[0]+bottomLeft[0])/2+rotLong, (topRight[1]+bottomLeft[1])/2];
 
-            let scale = Math.min(
-                self.width / (topRight[0] + bottomLeft[0]),
-                self.height / (topRight[1] - bottomLeft[1])
+            let projectionScaleFactor = Math.min(
+                MAP_SIZE['width']/ (topRight[0] + bottomLeft[0]),
+                MAP_SIZE['height'] / (topRight[1] - bottomLeft[1])
             );
 
             //Define map projection
@@ -198,12 +206,19 @@ class Map {
                 .center(center)
                 .rotate([rotLong, 0, 0])
                 .parallels([bottomLeft[1], topRight[1]])
-                .translate([self.width / 2, self.height / 2])
-                .scale(scale * 200);
+                .translate([MAP_SIZE['width'] / 2, MAP_SIZE['height'] / 2])
+                .scale(1); // dummy value used to calculate actuale factor later
+            // TODO: find the right projection settings so that size of map can be changed
 
             //Define path generator
             self.pathGenerator = d3.geoPath()
                 .projection(self.projection);
+
+            // Set the actual scale factor
+            let scaleCenter = calculateScaleCenter(json, MAP_SIZE['width'], MAP_SIZE['height'], self.pathGenerator);
+            //self.projection.center(scaleCenter.center);
+            self.projection.scale(scaleCenter.scale);
+
 
             self.bundeslaender = json.features;
 
@@ -212,7 +227,6 @@ class Map {
                 //self.avgTemp = data;
                 self.dataType.temperature['data'] = data;
                 let minMax = self.getMinMax(data);
-                self.dataType.temperature['minMax'] = minMax;
 
                 self.dataType.temperature['colorScale'] = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
@@ -239,10 +253,8 @@ class Map {
                     });
 
                 // prepare legend
-                self.dataType.temperature['scaleWidthToData'] = d3.scaleLinear([0,380], [self.dataType.temperature['minMax']['min'], self.dataType.temperature['minMax']['max']]);
-                self.dataType.temperature['scaleDataToWidth'] = d3.scaleLinear([self.dataType.temperature['minMax']['min'], self.dataType.temperature['minMax']['max']], [0,400]);
-
-                //console.log(self.dataType.temperature['scaleDataToWidth'](200))
+                self.dataType.temperature['scaleWidthToData'] = d3.scaleLinear([0,MAP_SIZE['legend-width']], [minMax['min'], minMax['max']]);
+                self.dataType.temperature['scaleDataToWidth'] = d3.scaleLinear([minMax['min'], minMax['max']], [0,MAP_SIZE['legend-width']]);
 
                 self.createLegend(self.dataType.temperature);
                 // didn't work with the normal d3 function (because of class/this reference?
@@ -265,8 +277,8 @@ class Map {
                     ["darkblue", "yellow"]
                 );
 
-                self.dataType.sunshine['scaleWidthToData'] = d3.scaleLinear([0,380], [self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']]);
-                self.dataType.sunshine['scaleDataToWidth'] = d3.scaleLinear([self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']], [0,400]);
+                self.dataType.sunshine['scaleWidthToData'] = d3.scaleLinear([0,MAP_SIZE['legend-width']], [self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']]);
+                self.dataType.sunshine['scaleDataToWidth'] = d3.scaleLinear([self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']], [0,MAP_SIZE['legend-width']]);
             });
 
             // load precipitation data
@@ -281,8 +293,8 @@ class Map {
                     ["lightyellow", "green", "blue"]
                 );
 
-                self.dataType.precipitation['scaleWidthToData'] = d3.scaleLinear([0,380], [self.dataType.precipitation['minMax']['min'], self.dataType.precipitation['minMax']['max']]);
-                self.dataType.precipitation['scaleDataToWidth'] = d3.scaleLinear([self.dataType.precipitation['minMax']['min'], self.dataType.precipitation['minMax']['max']], [0,400]);
+                self.dataType.precipitation['scaleWidthToData'] = d3.scaleLinear([0,MAP_SIZE['legend-width']], [self.dataType.precipitation['minMax']['min'], self.dataType.precipitation['minMax']['max']]);
+                self.dataType.precipitation['scaleDataToWidth'] = d3.scaleLinear([self.dataType.precipitation['minMax']['min'], self.dataType.precipitation['minMax']['max']], [0,MAP_SIZE['legend-width']]);
 
             })
         });
@@ -325,3 +337,44 @@ $(document).ready(function(){
         "#legendRight", "#tooltip");
 
 });
+
+
+/**
+ * Calculate the scale factor and the center coordinates of a GeoJSON
+ * FeatureCollection. For the calculation, the height and width of the
+ * map container is needed.
+ *
+ * Thanks to: http://stackoverflow.com/a/17067379/841644
+ *
+ * @param {object} features - A GeoJSON FeatureCollection object
+ *   containing a list of features.
+ *
+ * @param width
+ * @param height
+ * @param path
+ * @return {object} An object containing the following attributes:
+ *   - scale: The calculated scale factor.
+ *   - center: A list of two coordinates marking the center.
+ */
+function calculateScaleCenter(features, width, height, path) {
+    // Get the bounding box of the paths (in pixels!) and calculate a
+    // scale factor based on the size of the bounding box and the map
+    // size.
+    var bbox_path = path.bounds(features),
+        scale = 0.95 / Math.max(
+            (bbox_path[1][0] - bbox_path[0][0]) / width,
+            (bbox_path[1][1] - bbox_path[0][1]) / height
+        );
+
+    // Get the bounding box of the features (in map units!) and use it
+    // to calculate the center of the features.
+    var bbox_feature = d3.geoBounds(features),
+        center = [
+            (bbox_feature[1][0] + bbox_feature[0][0]) / 2,
+            (bbox_feature[1][1] + bbox_feature[0][1]) / 2];
+
+    return {
+        'scale': scale,
+        'center': center
+    };
+}
