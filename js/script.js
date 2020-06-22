@@ -18,7 +18,10 @@ const MAP_SIZE = {
 class Map {
     constructor(mapSelector, yearSelector, typeSelector, legendSelector, tooltipSelector) {
         this.mapId = mapSelector.slice(1);
-        this.map = d3.select(mapSelector);
+        this.map = d3.select(mapSelector)
+            .attr("viewBox", [0,0,MAP_SIZE.width,MAP_SIZE.height])//.attr("viewBox", "(0, 0," + MAP_SIZE.width + "," + MAP_SIZE.height + ")")
+            .classed("svg-content", true)
+            .attr("preserveAspectRatio", "xMinYMin meet");
 
         // if we want background color:
         // this.map.append("rect").attr("width", MAP_SIZE['width'])
@@ -26,7 +29,11 @@ class Map {
 
         this.typeField = d3.select(typeSelector);
         this.yearField = d3.select(yearSelector);
-        this.legend = d3.select(legendSelector);
+        this.legend = d3.select(legendSelector)
+            .attr("viewBox", [0,0,MAP_SIZE["legend-width"], 60])
+            .attr("svg-content", true)
+            //.attr("preserverAspectRatio", "xMinYMin meet");
+
         this.minMax = {}
         this.tooltip = d3.select(tooltipSelector)
 
@@ -99,8 +106,11 @@ class Map {
             .style("opacity", 0.8);
 
         // Show value indicator on legend
-        let offset = (MAP_SIZE['width'] - MAP_SIZE['legend-width']) / 2;
-        let currentPosOnLegend = dataType.scaleDataToWidth(currentValue) + offset;
+        let widthVB = this.legend.attr('viewBox').split(",")[2];
+        let xVB = this.legend.attr('viewBox').split(",")[0];
+
+        let dataToPositionScale = d3.scaleLinear([dataType.minMax.min, dataType.minMax.max], [xVB, widthVB]);
+        let currentPosOnLegend = parseInt(dataToPositionScale(currentValue));//dataType.scaleDataToWidth(currentValue) + offset;
 
         let tri = {
             a: [currentPosOnLegend, 20],
@@ -157,12 +167,14 @@ class Map {
         let widthToDataScale = dataType.scaleWidthToData;
         let dataToWidthScale = dataType.scaleDataToWidth;
 
+        console.log(MAP_SIZE)
+
         let offset = 0;//Math.round((MAP_SIZE['width'] - MAP_SIZE['legend-width']) / 2);
 
         // steps of legend color change
         let scaleIncrements = [...Array(MAP_SIZE['legend-width']).keys()].map(i => i);
         // let scaleIncrements = [...Array(381).keys()].map(i => i);
-        let legendSvg = this.legend.attr("width", (MAP_SIZE['legend-width'] + offset ) + "px").attr("height", "60px")
+        let legendSvg = this.legend; //.attr("width", (MAP_SIZE['legend-width'] + offset ) + "px").attr("height", "60px")
         legendSvg.selectAll("rect").remove(); // remove legend if there was one before
         legendSvg.selectAll("rect").data(scaleIncrements).enter().append("rect")
             .attr("transform", "translate(" + offset + ",0)")
@@ -188,8 +200,8 @@ class Map {
             self.width = MAP_SIZE['width'];
             self.height = MAP_SIZE['height'];
 
-            self.map.attr("width", self.width);
-            self.map.attr("height", self.height);
+            //self.map.attr("width", self.width);
+            //self.map.attr("height", self.height);
 
             let bounds = d3.geoBounds(json);
             let bottomLeft = bounds[0], topRight = bounds[1];
@@ -227,6 +239,7 @@ class Map {
                 //self.avgTemp = data;
                 self.dataType.temperature['data'] = data;
                 let minMax = self.getMinMax(data);
+                self.dataType.temperature['minMax'] = minMax;
 
                 self.dataType.temperature['colorScale'] = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
@@ -276,6 +289,7 @@ class Map {
                     [minMax['min'], minMax['max']],
                     ["darkblue", "yellow"]
                 );
+                self.dataType['minMax'] = minMax;
 
                 self.dataType.sunshine['scaleWidthToData'] = d3.scaleLinear([0,MAP_SIZE['legend-width']], [self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']]);
                 self.dataType.sunshine['scaleDataToWidth'] = d3.scaleLinear([self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']], [0,MAP_SIZE['legend-width']]);
@@ -331,10 +345,12 @@ class Map {
 var mapLeft, mapRight, legend, scale, cScale;
 
 $(document).ready(function(){
+
+    // resize map to current screen
     let container = document.getElementById("mapContainerLeft");
-    MAP_SIZE.height = container.offsetHeight;//window.innerHeight - 200;
-    MAP_SIZE.width = container.offsetWidth; //window.innerWidth / 2;
-    console.log(MAP_SIZE);
+    MAP_SIZE.height = container.clientHeight - ((container.offsetHeight/100)*10);//container.offsetHeight;//window.innerHeight - 200;
+    MAP_SIZE.width = container.clientWidth;//Math.round(window.innerWidth / 2);
+
     MAP_SIZE["legend-width"] = Math.round((MAP_SIZE.width / 100) * 80);
 
     mapLeft = new Map("#mapLeft", "#selectYearLeft", "#selectTypeLeft",

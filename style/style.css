@@ -1,37 +1,47 @@
+body {
+    display: block;
+    width: 100%;
+    height: 100vh;
+}
+
 .maps-container {
+    width: 100%;
+    height: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1.6fr 0.2fr 0.2fr;
-    gap: 5px 5px;
-    grid-template-areas: "map1 map2" "legend1 legend2" "config1 config2" ;
+    grid-template-columns: 0.2fr 0.1fr 1fr 0.1fr 0.2fr 0.1fr 1fr 0.1fr 0.2fr;
+    grid-template-rows: 2.2fr 0.4fr 0.4fr;
+    gap: 1px 1px;
+    grid-template-areas: ". mapContainerLeft mapContainerLeft mapContainerLeft . mapContainerRight mapContainerRight mapContainerRight ." ". . legendContainerLeft . . . legendContainerRight . ." ". . configLeft . . . configRight . .";
 }
 
 #mapContainerLeft {
-    grid-area: map1;
+    width: 100%;
+    height: 100%;
+    grid-area: mapContainerLeft;
     text-align: center;
 }
 
 #mapContainerRight {
-    grid-area: map2;
+    grid-area: mapContainerRight;
     text-align: center;
 }
 
 #configLeft {
-    grid-area: config1;
+    grid-area: configLeft;
     text-align: center;
 }
 
 #configRight {
-    grid-area: config2;
+    grid-area: configRight;
     text-align: center;
 }
 
 #legendContainerLeft {
-    grid-area: legend1;
+    grid-area: legendContainerLeft;
     text-align: center;
 }
 #legendContainerRight {
-    grid-area: legend2;
+    grid-area: legendContainerRight;
     text-align: center;
 }
 
