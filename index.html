@@ -18,13 +18,13 @@
   <body>
 
     <div class="maps-container">
-
-
       <div id="mapContainerLeft">
         <svg id="mapLeft" width="400" height="600">
         </svg>
       </div>
-      <svg id="legendLeft"></svg>
+      <div id="legendContainerLeft">
+        <svg id="legendLeft"></svg>
+      </div>
       <div id="configLeft">
         <label for="selectYearLeft">Jahr</label>
         <select id="selectYearLeft"></select>
@@ -38,7 +38,10 @@
         <svg id="mapRight" width="400" height="600">
         </svg>
       </div>
-      <svg id="legendRight"></svg>
+      <div id="legendContainerRight">
+        <svg id="legendRight"></svg>
+      </div>
+
       <div id="configRight">
         <label for="selectYearRight">Jahr</label>
         <select id="selectYearRight"></select>

@@ -2,20 +2,38 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1.6fr 0.2fr 0.2fr;
-    gap: 1px 1px;
+    gap: 5px 5px;
     grid-template-areas: "map1 map2" "legend1 legend2" "config1 config2" ;
 }
 
-#mapContainerLeft { grid-area: map1; }
+#mapContainerLeft {
+    grid-area: map1;
+    text-align: center;
+}
 
-#mapContainerRight { grid-area: map2; }
+#mapContainerRight {
+    grid-area: map2;
+    text-align: center;
+}
 
-#configLeft { grid-area: config1; }
+#configLeft {
+    grid-area: config1;
+    text-align: center;
+}
 
-#configRight { grid-area: config2; }
+#configRight {
+    grid-area: config2;
+    text-align: center;
+}
 
-#legendLeft {grid-area: legend1;}
-#legendRight {grid-area: legend2;}
+#legendContainerLeft {
+    grid-area: legend1;
+    text-align: center;
+}
+#legendContainerRight {
+    grid-area: legend2;
+    text-align: center;
+}
 
 #tooltip {
     background-color: steelblue;

@@ -5,8 +5,8 @@ const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschl
 //const BUNDESLAENDER_JSON = "https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/4_niedrig.geo.json";
 
 const MAP_SIZE = {
-    "height": 600,
-    "width": 400,
+    "height": 800,
+    "width": 600,
     "legend-width": 350
 }
 
@@ -157,7 +157,7 @@ class Map {
         let widthToDataScale = dataType.scaleWidthToData;
         let dataToWidthScale = dataType.scaleDataToWidth;
 
-        let offset = (MAP_SIZE['width'] - MAP_SIZE['legend-width']) / 2
+        let offset = 0;//Math.round((MAP_SIZE['width'] - MAP_SIZE['legend-width']) / 2);
 
         // steps of legend color change
         let scaleIncrements = [...Array(MAP_SIZE['legend-width']).keys()].map(i => i);
@@ -331,10 +331,16 @@ class Map {
 var mapLeft, mapRight, legend, scale, cScale;
 
 $(document).ready(function(){
+    let container = document.getElementById("mapContainerLeft");
+    MAP_SIZE.height = container.offsetHeight;//window.innerHeight - 200;
+    MAP_SIZE.width = container.offsetWidth; //window.innerWidth / 2;
+    console.log(MAP_SIZE);
+    MAP_SIZE["legend-width"] = Math.round((MAP_SIZE.width / 100) * 80);
+
     mapLeft = new Map("#mapLeft", "#selectYearLeft", "#selectTypeLeft",
-        "#legendLeft", "#tooltip");
+       "#legendLeft", "#tooltip");
     mapRight = new Map("#mapRight", "#selectYearRight", "#selectTypeRight",
-        "#legendRight", "#tooltip");
+       "#legendRight", "#tooltip");
 
 });
 
