@@ -56,6 +56,29 @@ body {
     opacity: 0;
 }
 
+label, select {
+    font-family: Helvetica, Arial, sans-serif;
+}
+
+label {
+    font-weight: bold;
+}
+
+select {
+    margin-top: 0.5em;
+    width: 90%;
+    background: #fff7f7;
+}
+
+.selectGroup {
+    margin-bottom: 1em;
+}
+
+.selectGroupColumn {
+    float: left;
+    width: 50%;
+}
+
 @keyframes spinner-line-fade-more {
     0%, 100% {
         opacity: 0; /* minimum opacity */
