@@ -186,6 +186,18 @@ class Map {
     }
 
     initMap(){
+        let target = document.getElementById('spinnable');
+        let opts = {
+            lines: 9, // The number of lines to draw
+            length: 9, // The length of each line
+            width: 5, // The line thickness
+            radius: 14, // The radius of the inner circle
+            color: '#EE3124', // #rgb or #rrggbb or array of colors
+            speed: 1.9, // Rounds per second
+            trail: 40, // Afterglow percentage
+            className: 'spinner', // The CSS class to assign to the spinner
+        };
+        let newSpinner = new Spin.Spinner(opts).spin(target);
         let self = this; // keep reference to instance
         d3.json(BUNDESLAENDER_JSON).then(function(json){
             /*
@@ -198,7 +210,7 @@ class Map {
             let bottomLeft = bounds[0], topRight = bounds[1];
             let rotLong = -(topRight[0]+bottomLeft[0])/2;
             let center = [(topRight[0]+bottomLeft[0])/2+rotLong, (topRight[1]+bottomLeft[1])/2];
-
+            newSpinner.stop();
             //Define map projection
             self.projection = d3.geoAlbers()
                 .center(center)
