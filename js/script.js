@@ -9,7 +9,7 @@ const MAP_SIZE = {
 };
 
 
-class Map {
+class WeatherMap {
     constructor(mapSelector, yearSelector, typeSelector, legendSelector, tooltipSelector) {
         this.mapId = mapSelector.slice(1);
         this.map = d3.select(mapSelector)
@@ -32,7 +32,6 @@ class Map {
             precipitation: {},
             sunshine: {}
         };
-
 
         this.initSelectors();
         this.initMap();
@@ -139,7 +138,6 @@ class Map {
             .append('option')
             .text(d=>d)
             .attr('value', d=>d);
-
 
         this.yearField.selectAll('option')
             .data(YEARS)
@@ -335,9 +333,9 @@ $(document).ready(function(){
 
     MAP_SIZE['legend-width'] = Math.round((MAP_SIZE.width / 100) * 80);
 
-    let mapLeft = new Map('#mapLeft', '#selectYearLeft', '#selectTypeLeft',
+    let mapLeft = new WeatherMap('#mapLeft', '#selectYearLeft', '#selectTypeLeft',
        '#legendLeft', '#tooltip');
-    let mapRight = new Map('#mapRight', '#selectYearRight', '#selectTypeRight',
+    let mapRight = new WeatherMap('#mapRight', '#selectYearRight', '#selectTypeRight',
        '#legendRight', '#tooltip');
 
 });
