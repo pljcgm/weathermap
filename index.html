@@ -10,14 +10,14 @@
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
     <script src="js/script.js"></script>
+    <script src='js/spin.js'></script>
 
   </head>
 
   <!-- weather data from DWD -->
 
   <body>
-
-    <div class="maps-container">
+    <div class="maps-container" id="spinnable">
       <div id="mapContainerLeft" class="svg-content">
         <svg id="mapLeft">
         </svg>
@@ -26,10 +26,16 @@
         <svg id="legendLeft"></svg>
       </div>
       <div id="configLeft">
-        <label for="selectYearLeft">Jahr</label>
-        <select id="selectYearLeft"></select>
-        <label for="selectTypeLeft">Daten</label>
-        <select id="selectTypeLeft"></select>
+        <div class="selectGroup">
+          <div class="selectGroupColumn">
+            <label for="selectYearLeft">Jahr</label>
+            <select id="selectYearLeft"></select>
+          </div>
+            <div class="selectGroupColumn">
+            <label for="selectTypeLeft">Daten</label>
+            <select id="selectTypeLeft"></select>
+            </div>
+        </div>
       </div>
 
 
@@ -43,10 +49,16 @@
       </div>
 
       <div id="configRight">
-        <label for="selectYearRight">Jahr</label>
-        <select id="selectYearRight"></select>
-        <label for="selectTypeRight">Daten</label>
-        <select id="selectTypeRight"></select>
+        <div class="selectGroup">
+          <div class="selectGroupColumn">
+          <label for="selectYearRight">Jahr</label>
+          <select id="selectYearRight"></select>
+          </div>
+          <div class="selectGroupColumn">
+            <label for="selectTypeRight">Daten</label>
+            <select id="selectTypeRight"></select>
+          </div>
+        </div>
       </div>
 
 

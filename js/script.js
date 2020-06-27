@@ -1,8 +1,6 @@
 const YEARS = [...Array(29).keys()].map(i => i + 1991);
 const DATATYPES = ['Temperatur', 'Sonnenscheindauer', 'Niederschlag'];
-const BUNDESLAENDER_JSON = 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json';
-// const BUNDESLAENDER_JSON = 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/3_mittel.geo.json';
-//const BUNDESLAENDER_JSON = 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/4_niedrig.geo.json';
+const STATES_JSON = 'https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/master/2_bundeslaender/1_sehr_hoch.geo.json';
 
 const MAP_SIZE = {
     'height': 800,
@@ -10,22 +8,14 @@ const MAP_SIZE = {
     'legend-width': 350,
 };
 
-// TODO: better structure for data / functions (json function calls?)
-// TODO: only update legend when dataType has changed
-// TODO: var/let/const & self/this reference
 
-
-class Map {
+class WeatherMap {
     constructor(mapSelector, yearSelector, typeSelector, legendSelector, tooltipSelector) {
         this.mapId = mapSelector.slice(1);
         this.map = d3.select(mapSelector)
             .attr('viewBox', [0,0,MAP_SIZE.width,MAP_SIZE.height])
             .classed('svg-content', true)
             .attr('preserveAspectRatio', 'xMinYMin meet');
-
-        // if we want background color:
-        // this.map.append('rect').attr('width', MAP_SIZE['width'])
-        //     .attr('height', MAP_SIZE['height']).style('fill', 'black')
 
         this.typeField = d3.select(typeSelector);
         this.yearField = d3.select(yearSelector);
@@ -40,11 +30,8 @@ class Map {
         this.dataType = {
             temperature: {},
             precipitation: {},
-            sunshine: {},
-            minMax: {},
-            data: null,
+            sunshine: {}
         };
-
 
         this.initSelectors();
         this.initMap();
@@ -88,6 +75,7 @@ class Map {
 
     showTooltip(element, d, currentData, dataType) {
         let currentValue = currentData[d['properties']['name']];
+        let unit = dataType.unit;
 
         this.map.selectAll('path').attr('opacity', 0.7);
         d3.select(element).attr('opacity', 1);
@@ -96,7 +84,7 @@ class Map {
             .style('visibility', 'visible')
             .style('top', '$(event.pageY-30) px')
             .style('left', '$(event.pageX) px')
-            .text(d['properties']['name'] + ': ' + currentValue)
+            .text(d['properties']['name'] + ': ' + currentValue + ' ' + unit)
             .style('background-color', dataType.colorScale(currentValue))
             .style('opacity', 0);
         this.tooltip.transition().duration(100)
@@ -109,11 +97,12 @@ class Map {
         let dataToPositionScale = d3.scaleLinear([dataType.minMax.min, dataType.minMax.max], [xVB, widthVB]);
         let currentPosOnLegend = parseInt(dataToPositionScale(currentValue));
 
+        // get triangle points for value indicator
         let tri = {
             a: [currentPosOnLegend, 20],
             b: [currentPosOnLegend + 10, 0],
             c: [currentPosOnLegend - 10, 0],
-        }
+        };
 
         this.legend.append('polygon').attr('points', tri.a[0]+','+tri.a[1]+' '+tri.b[0]+','+tri.b[1]+' '+tri.c[0]+','+tri.c[1])
             .style('fill', dataType.colorScale(currentValue))
@@ -123,7 +112,7 @@ class Map {
     moveTooltip(){
         this.tooltip
             .style('top', (event.pageY-30) + 'px')
-            .style('left', (event.pageX+30) + 'px')
+            .style('left', (event.pageX+30) + 'px');
     }
 
     hideTooltip() {
@@ -148,8 +137,7 @@ class Map {
             .enter()
             .append('option')
             .text(d=>d)
-            .attr('value', d=>d)
-
+            .attr('value', d=>d);
 
         this.yearField.selectAll('option')
             .data(YEARS)
@@ -164,30 +152,39 @@ class Map {
         let widthToDataScale = dataType.scaleWidthToData;
         let dataToWidthScale = dataType.scaleDataToWidth;
 
-        let offset = 0; // debug
-
         // steps of legend color change
         let scaleIncrements = [...Array(MAP_SIZE['legend-width']).keys()].map(i => i);
         let legendSvg = this.legend;
         legendSvg.selectAll('rect').remove(); // remove legend if there was one before
         legendSvg.selectAll('rect').data(scaleIncrements).enter().append('rect')
-            .attr('transform', 'translate(' + offset + ',0)')
             .attr('height', '20px')
             .attr('width', '2px')
             .attr('x', d => d + 'px')
             .attr('y', '20px')
-            .attr('fill', d => colorScale(widthToDataScale(d)))
+            .attr('fill', d => colorScale(widthToDataScale(d)));
 
         legendSvg.select('g').remove(); // remove axis if there was one before
-        let axis = d3.axisBottom().scale(dataToWidthScale).ticks(10).tickSize(5)
+        let axis = d3.axisBottom().scale(dataToWidthScale).ticks(10).tickSize(5);
 
-        legendSvg.append('g').attr('transform', 'translate( ' + offset + ',40)').call(axis);
-        legendSvg.select('g').call(g => g.select('.domain').remove()) // remove axis line
+        legendSvg.append('g').attr('transform', 'translate(0,40)').call(axis);
+        legendSvg.select('g').call(g => g.select('.domain').remove()); // remove axis line
     }
 
     initMap(){
+        let target = document.getElementById('spinnable');
+        let opts = {
+            lines: 9, // The number of lines to draw
+            length: 9, // The length of each line
+            width: 5, // The line thickness
+            radius: 14, // The radius of the inner circle
+            color: '#EE3124', // #rgb or #rrggbb or array of colors
+            speed: 1.9, // Rounds per second
+            trail: 40, // Afterglow percentage
+            className: 'spinner', // The CSS class to assign to the spinner
+        };
+        let newSpinner = new Spin.Spinner(opts).spin(target);
         let self = this; // keep reference to instance
-        d3.json(BUNDESLAENDER_JSON).then(function(json){
+        d3.json(STATES_JSON).then(function(json){
             /*
             geoBounds Idee kommt von https://observablehq.com/@sto3psl/map-of-germany-in-d3-js
             */
@@ -198,7 +195,7 @@ class Map {
             let bottomLeft = bounds[0], topRight = bounds[1];
             let rotLong = -(topRight[0]+bottomLeft[0])/2;
             let center = [(topRight[0]+bottomLeft[0])/2+rotLong, (topRight[1]+bottomLeft[1])/2];
-
+            newSpinner.stop();
             //Define map projection
             self.projection = d3.geoAlbers()
                 .center(center)
@@ -206,7 +203,6 @@ class Map {
                 .parallels([bottomLeft[1], topRight[1]])
                 .translate([MAP_SIZE['width'] / 2, MAP_SIZE['height'] / 2])
                 .scale(1); // dummy value used to calculate actual factor later
-            // TODO: find the right projection settings so that size of map can be changed
 
             //Define path generator
             self.pathGenerator = d3.geoPath()
@@ -214,7 +210,6 @@ class Map {
 
             // Set the actual scale factor
             let scaleCenter = calculateScaleCenter(json, MAP_SIZE['width'], MAP_SIZE['height'], self.pathGenerator);
-            //self.projection.center(scaleCenter.center);
             self.projection.scale(scaleCenter.scale);
 
 
@@ -222,7 +217,6 @@ class Map {
 
             // load temperature data
             d3.csv('./data/regional_averages_tm_year.csv').then(function(data) {
-                //self.avgTemp = data;
                 self.dataType.temperature['data'] = data;
                 let minMax = self.getMinMax(data);
                 self.dataType.temperature['minMax'] = minMax;
@@ -231,6 +225,7 @@ class Map {
                     [minMax['min'], minMax['max']],
                     ['lightblue', 'red']
                 );
+                self.dataType.temperature['unit'] = 'C°';
 
                 self.colorScaleTemp = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
@@ -256,7 +251,7 @@ class Map {
                 self.dataType.temperature['scaleDataToWidth'] = d3.scaleLinear([minMax['min'], minMax['max']], [0,MAP_SIZE['legend-width']]);
 
                 self.createLegend(self.dataType.temperature);
-                // didn't work with the normal d3 function (because of class/this reference?
+                // didn't work with the normal d3 function (because of class/this reference?)
                 self.map.selectAll('path').each(function(state) {
                     d3.select(this)
                         .on('mouseenter', (d, i) => self.showTooltip(this, d,dataForYear, self.dataType.temperature))
@@ -274,7 +269,7 @@ class Map {
                     [minMax['min'], minMax['max']],
                     ['darkblue', 'yellow']
                 );
-                self.dataType['minMax'] = minMax;
+                self.dataType.sunshine['unit'] = 'Std.';
 
                 self.dataType.sunshine['scaleWidthToData'] = d3.scaleLinear([0,MAP_SIZE['legend-width']],
                     [self.dataType.sunshine['minMax']['min'], self.dataType.sunshine['minMax']['max']]);
@@ -287,6 +282,7 @@ class Map {
                 self.dataType.precipitation['data'] = data;
                 let minMax = self.getMinMax(data);
                 self.dataType.precipitation['minMax'] = minMax;
+                self.dataType.precipitation['unit'] = 'mm';
 
                 self.dataType.precipitation['colorScale'] = d3.scaleLinear(
                     [minMax['min'], minMax['max']],
@@ -330,17 +326,16 @@ class Map {
 }
 
 $(document).ready(function(){
-
     // resize map to current screen
     let container = document.getElementById('mapContainerLeft');
-    MAP_SIZE.height = container.clientHeight - ((container.offsetHeight/100)*10);//container.offsetHeight;//window.innerHeight - 200;
-    MAP_SIZE.width = container.clientWidth;//Math.round(window.innerWidth / 2);
+    MAP_SIZE.height = container.offsetHeight + ((container.offsetHeight/100)*10);
+    MAP_SIZE.width = container.offsetWidth;
 
     MAP_SIZE['legend-width'] = Math.round((MAP_SIZE.width / 100) * 80);
 
-    mapLeft = new Map('#mapLeft', '#selectYearLeft', '#selectTypeLeft',
+    let mapLeft = new WeatherMap('#mapLeft', '#selectYearLeft', '#selectTypeLeft',
        '#legendLeft', '#tooltip');
-    mapRight = new Map('#mapRight', '#selectYearRight', '#selectTypeRight',
+    let mapRight = new WeatherMap('#mapRight', '#selectYearRight', '#selectTypeRight',
        '#legendRight', '#tooltip');
 
 });
